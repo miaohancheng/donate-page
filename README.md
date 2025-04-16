@@ -44,7 +44,7 @@
 
 * **在线演示**：[./sample1/index.html](https://miaohancheng.com/donate-page/sample1/index.html) (原始 iframe 版本)
 * **JS 嵌入**：查看上面的 **JS 嵌入式集成** 说明。
-* ![翻转卡片动图](https://upload-images.jianshu.io/upload_images/1819713-518ef42c3301b2fa.gif?imageMogr2/auto-orient/strip%7CimageView2/2/w/420/format/webp "翻转卡片动图")
+* ![翻转卡片动图](./sample1/images/example.gif "翻转卡片动图")
 
 ## 原始 iframe 集成方式 (旧版)
 
