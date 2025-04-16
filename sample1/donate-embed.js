@@ -181,7 +181,7 @@
                 transform: translate(-50%, -50%); /* Center in QRBox */
                 background: #fff; /* White background for QR */
                 border-radius: 6px;
-                box-shadow: 0px 2px 7px rgba(0,0,0,0.3);
+                /* box-shadow: 0px 2px 7px rgba(0,0,0,0.3); */ /* Removed box-shadow */
                 opacity: 0;
                 transition: opacity 0.5s ease-in-out; /* Fade transition */
                 transform-style: preserve-3d;
