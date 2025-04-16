@@ -10,6 +10,7 @@
      *
      * MODIFIED: Uses position:absolute, with left/top values adjusted to visually match the original iframe fixed layout.
      * Also adjusted z-index to match original stacking order (donateBox above DonateText).
+     * ADDED: Multi-language support for PayPal confirmation message based on browser language.
      */
     (function() {
         // Wait for the DOM to be fully loaded
@@ -312,16 +313,42 @@
         function initializeLogic(config, containerId) {
             const $ = jQuery;
 
+            // --- Translations for PayPal Confirmation ---
+            // Add more languages as needed
+            const translations = {
+                'en': 'You are about to leave this page to make a payment via PayPal. Are you sure you want to continue?',
+                'en-US': 'You are about to leave this page to make a payment via PayPal. Are you sure you want to continue?',
+                'en-GB': 'You are about to leave this page to make a payment via PayPal. Are you sure you want to continue?',
+                'zh': '您即将离开当前页面跳转到 PayPal 进行付款，确定要继续吗？',
+                'zh-CN': '您即将离开当前页面跳转到 PayPal 进行付款，确定要继续吗？',
+                'zh-TW': '您即將離開目前頁面跳轉到 PayPal 進行付款，確定要繼續嗎？',
+                'ja': 'このページを離れてPayPalで支払います。続行してもよろしいですか？', // Japanese example
+                'ko': 'PayPal을 통해 결제하기 위해 이 페이지를 떠나려고 합니다. 계속하시겠습니까?', // Korean example
+                'es': 'Está a punto de salir de esta página para realizar un pago a través de PayPal. ¿Está seguro de que desea continuar?', // Spanish example
+                'fr': 'Vous êtes sur le point de quitter cette page pour effectuer un paiement via PayPal. Êtes-vous sûr de vouloir continuer ?', // French example
+                'de': 'Sie sind dabei, diese Seite zu verlassen, um eine Zahlung über PayPal vorzunehmen. Möchten Sie wirklich fortfahren?', // German example
+            };
+
             const containerSel = `#${containerId}`;
             const QRBox    = $(`${containerSel} #QRBox`);
             const MainBox  = $(`${containerSel} #MainBox`);
             const donateBoxItems = $(`${containerSel} #donateBox>li`);
             const otherElements = $(`${containerSel} #DonateText, ${containerSel} #donateBox, ${containerSel} #github`);
 
-            // --- PayPal Click Confirmation ---
+            // --- PayPal Click Confirmation (Multi-language) ---
             $(`${containerSel} #PayPal a`).off('click.donate').on('click.donate', function(event) {
                 event.preventDefault();
-                const confirmLeave = confirm("您即将离开当前页面跳转到 PayPal 进行付款，确定要继续吗？");
+
+                // Get browser language
+                const userLang = navigator.language || 'en'; // Default to 'en'
+                const baseLang = userLang.split('-')[0]; // Get base language (e.g., 'en' from 'en-US')
+
+                // Find the appropriate message
+                // Check full language code first (e.g., 'zh-CN'), then base language (e.g., 'zh'), then fallback to English ('en')
+                const message = translations[userLang] || translations[baseLang] || translations['en'];
+
+                // Show confirmation dialog with the selected message
+                const confirmLeave = confirm(message);
                 if (confirmLeave) {
                     window.open(this.href, '_blank');
                 }
@@ -347,7 +374,7 @@
                     const qrImg = $('<img>', {
                        id: 'qrCodeImage',
                        src: qrImageUrl,
-                       alt: '付款二维码'
+                       alt: '付款二维码' // Alt text might also need translation in a more complex setup
                     });
                     qrImg.on('click.donate', function(event) {
                         event.stopPropagation();
