@@ -33,6 +33,7 @@
     <script src="[https://your-domain.com/path/to/donate-embed.js](https://your-domain.com/path/to/donate-embed.js)" defer></script>
     ```
     * 将 `https://your-domain.com/path/to/donate-embed.js` 替换为你实际托管脚本的 URL。
+    * 如果不想部署可以直接使用 `https://miaohancheng.com/donate-page/sample1/donate-embed.js` ，但要记得传入收款码、paypal相关地址，其余图片会自动加载
 4.  **托管资源**：你需要将 `donate-embed.js` 文件、`sample1/images/` 目录下的所有图标文件 (`like.svg`, `paypal.svg`, `alipay.svg`, `wechat.svg`, `github.svg`) 以及你的二维码图片托管到你的服务器或 CDN 上，并确保上述配置中的 URL 正确无误。
 
 ---
