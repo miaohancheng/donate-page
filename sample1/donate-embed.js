@@ -31,24 +31,33 @@
          // Use jQuery safely
         const $ = jQuery;
 
+        // --- Define Default URLs First ---
+        // IMPORTANT: Replace default URLs with your actual hosted asset URLs!
+        const defaultUrls = {
+            payPal: 'https://paypal.me/miaohancheng',
+            aliPayQr: 'https://miaohancheng.com/donate-page/sample1/images/al.jpg', // Example: Needs hosting!
+            weChatQr: 'https://miaohancheng.com/donate-page/sample1/images/wx.jpg', // Example: Needs hosting!
+            github: 'https://github.com/miaohancheng/donate-page',
+            assetBase: 'https://miaohancheng.com/donate-page/sample1/images/' // Example: Base URL for icons
+        };
+
         // --- Read Configuration ---
         // Get settings from data-* attributes on the container, or use defaults.
-        // IMPORTANT: Replace default URLs with your actual hosted asset URLs!
         const config = {
-            // Default URLs (replace with your actual URLs)
-            defaultPayPalUrl: 'https://paypal.me/miaohancheng',
-            defaultAliPayQrUrl: 'https://miaohancheng.com/donate-page/sample1/images/al.jpg', // Example: Needs hosting!
-            defaultWeChatQrUrl: 'https://miaohancheng.com/donate-page/sample1/images/wx.jpg', // Example: Needs hosting!
-            defaultGithubUrl: 'https://github.com/miaohancheng/donate-page',
-            defaultAssetBaseUrl: 'https://miaohancheng.com/donate-page/sample1/images/', // Example: Base URL for icons (like.svg, paypal.svg etc.)
-
-            // Read from data attributes, fallback to defaults
-            payPalUrl: container.dataset.paypalUrl || this.defaultPayPalUrl,
-            aliPayQrUrl: container.dataset.alipayQr || this.defaultAliPayQrUrl,
-            weChatQrUrl: container.dataset.wechatQr || this.defaultWeChatQrUrl,
-            githubUrl: container.dataset.githubUrl, // Optional, don't show if not provided or empty
-            assetBaseUrl: (container.dataset.assetBaseUrl || this.defaultAssetBaseUrl).replace(/\/?$/, '/') // Ensure trailing slash
+            payPalUrl: container.dataset.paypalUrl || defaultUrls.payPal,
+            aliPayQrUrl: container.dataset.alipayQr || defaultUrls.aliPayQr,
+            weChatQrUrl: container.dataset.wechatQr || defaultUrls.weChatQr,
+            // Read githubUrl directly, handle default below if needed
+            githubUrl: container.dataset.githubUrl,
+            // Read assetBaseUrl, ensure trailing slash
+            assetBaseUrl: (container.dataset.assetBaseUrl || defaultUrls.assetBase).replace(/\/?$/, '/')
         };
+
+        // Apply default githubUrl only if it wasn't provided via data attribute
+        if (config.githubUrl === undefined && defaultUrls.github) {
+             config.githubUrl = defaultUrls.github;
+        }
+
 
         // --- 1. Inject CSS into <head> ---
         injectCSS(config.assetBaseUrl, containerId);
@@ -281,6 +290,7 @@
 
         // Build HTML string (Alternatively use document.createElement for more complex structures)
         let githubLinkHTML = '';
+        // Only add github link if config.githubUrl has a value
         if (config.githubUrl) {
             githubLinkHTML = `<a id="github" href="${config.githubUrl}" target="_blank" title="Github"></a>`;
         }
