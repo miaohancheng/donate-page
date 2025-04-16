@@ -189,6 +189,7 @@
                 overflow: hidden;
                 padding: 5px; /* Padding around the image */
                 box-sizing: border-box;
+                border: none; /* Explicitly remove border */
             }
              #${containerId} #qrCodeImage { /* Style for the QR img */
                  max-width: 100%;
