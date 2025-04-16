@@ -166,7 +166,8 @@
                 width: 100%;
                 height: 100%;
                 z-index: 100; /* Highest */
-                background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+                /* background-color: rgba(0, 0, 0, 0.5); */ /* Semi-transparent background */
+                background-color: transparent; /* DEBUG: Make background transparent */
                 display: none; /* Initially hidden */
                 perspective: 400px;
             }
@@ -190,6 +191,7 @@
                 padding: 5px; /* Padding around the image */
                 box-sizing: border-box;
                 border: none; /* Explicitly remove border */
+                outline: none; /* Explicitly remove outline */
             }
              #${containerId} #qrCodeImage { /* Style for the QR img */
                  max-width: 100%;
