@@ -39,8 +39,10 @@
 ### 2) 引入脚本
 
 ```html
-<script src="/sample1/donate-embed.js" defer></script>
+<script src="./sample1/donate-embed.js" defer></script>
 ```
+
+> GitHub Pages 项目页（`https://<user>.github.io/<repo>/`）不要使用 `/sample1/...` 这种以 `/` 开头的绝对路径，否则会 404。
 
 ---
 
@@ -56,7 +58,7 @@
      data-asset-base-url="https://your-cdn.com/donate-icons/"
      data-github-url="https://github.com/your-repo">
 </div>
-<script src="/sample1/donate-embed.js" defer></script>
+<script src="./sample1/donate-embed.js" defer></script>
 ```
 
 > 说明：脚本会自动扫描 `#donate-widget-container` 与 `[data-donate-widget]`，并去重初始化。
@@ -96,7 +98,7 @@ window.DonateWidget.initAll(options)
 ## Legacy iframe 集成（降级方案）
 
 ```html
-<iframe src="/sample1/index.html"
+<iframe src="./sample1/index.html"
         style="overflow:hidden;border:0;min-height:240px;width:100%;"
         frameborder="0"
         scrolling="no"></iframe>
@@ -110,6 +112,7 @@ window.DonateWidget.initAll(options)
 
 - 检查容器是否存在（`#donate-widget-container` 或 `[data-donate-widget]`）。
 - 检查 `donate-embed.js` 是否成功加载（Network 200）。
+- 如果是 GitHub Pages 项目页，确认脚本路径不是 `/sample1/donate-embed.js`，应使用 `./sample1/donate-embed.js` 或 `sample1/donate-embed.js`。
 
 ### 2) 图标或二维码不显示
 

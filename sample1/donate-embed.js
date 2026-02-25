@@ -19,13 +19,15 @@
   var LEGACY_CONTAINER_ID = 'donate-widget-container';
 
   var instances = new WeakMap();
+  var SCRIPT_BASE_URL = detectScriptBaseUrl();
+  var RUNTIME_BASE_URL = SCRIPT_BASE_URL || resolveResourceUrl('./sample1/', document.baseURI);
 
   var DEFAULTS = {
     payPalUrl: 'https://paypal.me/miaohancheng',
-    aliPayQrUrl: 'https://miaohancheng.com/donate-page/sample1/images/al.jpg',
-    weChatQrUrl: 'https://miaohancheng.com/donate-page/sample1/images/wx.jpg',
+    aliPayQrUrl: resolveResourceUrl('images/al.jpg', RUNTIME_BASE_URL),
+    weChatQrUrl: resolveResourceUrl('images/wx.jpg', RUNTIME_BASE_URL),
     githubUrl: 'https://github.com/miaohancheng/donate-page',
-    assetBaseUrl: 'https://miaohancheng.com/donate-page/sample1/images/',
+    assetBaseUrl: normalizeAssetBase(resolveResourceUrl('images/', RUNTIME_BASE_URL)),
     theme: 'light',
     lang: 'auto',
     title: 'Donate',
@@ -123,6 +125,48 @@
     return url.replace(/\/?$/, '/');
   }
 
+  function hasScheme(value) {
+    return /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(value);
+  }
+
+  function resolveResourceUrl(value, base) {
+    var url = trimOrEmpty(value);
+    if (!url) {
+      return '';
+    }
+
+    if (hasScheme(url) || url.indexOf('//') === 0) {
+      return url;
+    }
+
+    try {
+      return new URL(url, base || document.baseURI).href;
+    } catch (error) {
+      return url;
+    }
+  }
+
+  function detectScriptBaseUrl() {
+    var current = document.currentScript;
+    if (current && current.src) {
+      return resolveResourceUrl('./', current.src);
+    }
+
+    var scripts = document.getElementsByTagName('script');
+    for (var index = scripts.length - 1; index >= 0; index -= 1) {
+      var src = scripts[index].getAttribute('src');
+      if (!src) {
+        continue;
+      }
+
+      if (/donate-embed(\.min)?\.js(?:$|[?#])/.test(src)) {
+        return resolveResourceUrl('./', resolveResourceUrl(src, document.baseURI));
+      }
+    }
+
+    return '';
+  }
+
   function resolveTextLang(langPref) {
     var value = (langPref || 'auto').toLowerCase();
     if (value !== 'auto') {
@@ -156,13 +200,23 @@
   function mergeConfig(element, options) {
     var datasetConfig = parseDataset(element);
     var runtimeOptions = options || {};
+    var rawPayPalUrl = trimOrEmpty(runtimeOptions.payPalUrl || datasetConfig.payPalUrl || DEFAULTS.payPalUrl);
+    var rawAliPayQrUrl = trimOrEmpty(runtimeOptions.aliPayQrUrl || datasetConfig.aliPayQrUrl || DEFAULTS.aliPayQrUrl);
+    var rawWeChatQrUrl = trimOrEmpty(runtimeOptions.weChatQrUrl || datasetConfig.weChatQrUrl || DEFAULTS.weChatQrUrl);
+    var rawGithubUrl = trimOrEmpty(runtimeOptions.githubUrl || datasetConfig.githubUrl || DEFAULTS.githubUrl);
+    var rawAssetBaseUrl = trimOrEmpty(runtimeOptions.assetBaseUrl || datasetConfig.assetBaseUrl || DEFAULTS.assetBaseUrl);
+
+    // Support paypal.me/xxx shorthand.
+    if (rawPayPalUrl && /^paypal\.me\//i.test(rawPayPalUrl)) {
+      rawPayPalUrl = 'https://' + rawPayPalUrl;
+    }
 
     var config = {
-      payPalUrl: trimOrEmpty(runtimeOptions.payPalUrl || datasetConfig.payPalUrl || DEFAULTS.payPalUrl),
-      aliPayQrUrl: trimOrEmpty(runtimeOptions.aliPayQrUrl || datasetConfig.aliPayQrUrl || DEFAULTS.aliPayQrUrl),
-      weChatQrUrl: trimOrEmpty(runtimeOptions.weChatQrUrl || datasetConfig.weChatQrUrl || DEFAULTS.weChatQrUrl),
-      githubUrl: trimOrEmpty(runtimeOptions.githubUrl || datasetConfig.githubUrl || DEFAULTS.githubUrl),
-      assetBaseUrl: normalizeAssetBase(runtimeOptions.assetBaseUrl || datasetConfig.assetBaseUrl || DEFAULTS.assetBaseUrl),
+      payPalUrl: resolveResourceUrl(rawPayPalUrl, document.baseURI),
+      aliPayQrUrl: resolveResourceUrl(rawAliPayQrUrl, document.baseURI),
+      weChatQrUrl: resolveResourceUrl(rawWeChatQrUrl, document.baseURI),
+      githubUrl: resolveResourceUrl(rawGithubUrl, document.baseURI),
+      assetBaseUrl: normalizeAssetBase(resolveResourceUrl(rawAssetBaseUrl, document.baseURI)),
       theme: trimOrEmpty(runtimeOptions.theme || datasetConfig.theme || DEFAULTS.theme) || DEFAULTS.theme,
       lang: trimOrEmpty(runtimeOptions.lang || datasetConfig.lang || DEFAULTS.lang) || DEFAULTS.lang,
       title: trimOrEmpty(runtimeOptions.title || datasetConfig.title || DEFAULTS.title) || DEFAULTS.title,
