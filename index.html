@@ -1,117 +1,386 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="zh-CN">
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <title>Donate Page by Miao hancheng</title> <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0">
-    <style type="text/css">
-        /* --- Base Styles (Keep existing styles) --- */
-        body, html { height: 100%; line-height: 1.6; font-size: 16px; font-family: system-ui, -apple-system, Helvetica Neue, sans-serif; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; margin: 0; padding: 0; background-color: #f0f2f5; /* Light background */ }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        a { color: #10aeff; text-decoration: none; }
-        a img { border: 0; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Donate Page V2</title>
+  <style>
+    :root {
+      --bg: #f4f8fa;
+      --bg-soft: #eaf2f6;
+      --surface: #ffffff;
+      --surface-soft: #f6fafc;
+      --text: #0f2436;
+      --muted: #5b6d80;
+      --line: rgba(15, 36, 54, 0.14);
+      --brand: #0f8f82;
+      --brand-strong: #0a7067;
+      --warm: #f4a748;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --shadow-lg: 0 24px 60px rgba(13, 37, 56, 0.14);
+      --shadow-md: 0 12px 28px rgba(13, 37, 56, 0.08);
+    }
 
-        /* --- Page Wrapper --- */
-        .page-wrapper { max-width: 800px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    * {
+      box-sizing: border-box;
+    }
 
-        /* --- Header --- */
-        .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
-        .header h1 { font-size: 28px; margin-bottom: 10px; color: #333; }
-        .header p { font-size: 16px; color: #666; }
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+    }
 
-        /* --- Section Styling --- */
-        .section { margin-bottom: 30px; padding: 20px; background-color: #f7f7f7; border-radius: 8px; }
-        .section h3 { font-size: 20px; margin-bottom: 15px; color: #444; border-left: 4px solid #10aeff; padding-left: 10px; }
-        .section p { margin-bottom: 10px; color: #555; line-height: 1.7; }
-        .section code { background-color: #e8e8e8; padding: 2px 6px; border-radius: 4px; font-family: Consolas, Monaco, monospace; font-size: 0.9em; }
-        .section pre { background-color: #2d2d2d; color: #ccc; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: Consolas, Monaco, monospace; font-size: 0.9em; line-height: 1.5; margin-top: 10px; }
-        .section pre code { background-color: transparent; padding: 0; } /* Reset code style inside pre */
+    body {
+      font-family: "Avenir Next", "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 10%, rgba(15, 143, 130, 0.15) 0, rgba(15, 143, 130, 0) 36%),
+        radial-gradient(circle at 82% 14%, rgba(244, 167, 72, 0.22) 0, rgba(244, 167, 72, 0) 34%),
+        linear-gradient(180deg, #f9fcfd 0%, var(--bg) 42%, #edf4f8 100%);
+      line-height: 1.6;
+    }
 
-        /* --- Demo Link Styling --- */
-        .demo-link { display: inline-block; margin-top: 10px; padding: 8px 15px; background-color: #10aeff; color: #fff; border-radius: 5px; transition: background-color 0.3s; }
-        .demo-link:hover { background-color: #007acc; color: #fff; text-decoration: none; }
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 36px 18px 48px;
+    }
 
-        /* --- JS Embed Demo Area --- */
-        #js-embed-demo-area {
-            border: 1px dashed #ccc;
-            padding: 20px;
-            margin-top: 15px;
-            position: relative; /* Needed for the widget's absolute positioning */
-            min-height: 150px; /* Ensure space for the widget */
-            display: flex; /* Center the container */
-            justify-content: center;
-            align-items: center;
-        }
-        #js-embed-demo-area p { text-align: center; color: #888; }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 22px;
+      align-items: stretch;
+      margin-bottom: 26px;
+    }
 
-        /* --- Footer --- */
-        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #999; }
-        .footer a { color: #10aeff; }
+    .hero-main,
+    .hero-side {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(155deg, var(--surface) 0%, var(--surface-soft) 100%);
+      box-shadow: var(--shadow-md);
+      padding: 24px;
+    }
 
-        /* --- Original weui styles (simplified or removed if not needed) --- */
-        /* Keep relevant styles if you reuse specific components, otherwise remove */
+    .hero-main h1 {
+      margin: 0;
+      font-size: clamp(30px, 4.4vw, 48px);
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+    }
 
-    </style>
+    .hero-sub {
+      margin: 14px 0 0;
+      color: var(--muted);
+      max-width: 42ch;
+      font-size: 16px;
+    }
+
+    .hero-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.78);
+      color: #24435b;
+      font-size: 13px;
+      padding: 5px 10px;
+      letter-spacing: 0.02em;
+    }
+
+    .hero-actions {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 42px;
+      padding: 0 16px;
+      border-radius: 11px;
+      text-decoration: none;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(140deg, var(--brand) 0%, var(--brand-strong) 100%);
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(11, 112, 103, 0.3);
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .hero-side h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .hero-side p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .hero-side ul {
+      margin: 14px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+    }
+
+    .hero-side li {
+      padding: 9px 10px;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow-md);
+      padding: 18px;
+    }
+
+    .panel h3 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: -0.01em;
+    }
+
+    .panel p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .preview-grid {
+      margin-top: 14px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .widget-card {
+      border: 1px dashed rgba(15, 36, 54, 0.24);
+      border-radius: 14px;
+      padding: 14px;
+      background: linear-gradient(180deg, #fcfeff 0%, #f5fafc 100%);
+    }
+
+    .widget-card h4 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      color: #3b5970;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    pre {
+      margin: 14px 0 0;
+      padding: 14px;
+      border-radius: 12px;
+      background: #0f2436;
+      color: #d9e4ef;
+      font-size: 13px;
+      overflow-x: auto;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    code {
+      font-family: "SFMono-Regular", "Menlo", "Monaco", "Consolas", monospace;
+    }
+
+    .legacy-section {
+      margin-top: 20px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(180deg, #fff 0%, #f8fbfd 100%);
+      padding: 14px;
+    }
+
+    .legacy-section iframe {
+      width: 100%;
+      border: 0;
+      min-height: 240px;
+      background: transparent;
+    }
+
+    .footer {
+      margin-top: 26px;
+      text-align: center;
+      color: #5b6d80;
+      font-size: 13px;
+    }
+
+    .footer a {
+      color: var(--brand-strong);
+      text-decoration: none;
+    }
+
+    @media (max-width: 920px) {
+      .hero,
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-main,
+      .hero-side,
+      .panel {
+        padding: 18px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .btn {
+        transition: none;
+      }
+
+      .btn:hover {
+        transform: none;
+      }
+    }
+  </style>
 </head>
-
 <body>
-<div class="page-wrapper">
+  <div class="page">
+    <header class="hero">
+      <section class="hero-main">
+        <h1>Donate Page V2<br>更快接入，更稳转化。</h1>
+        <p class="hero-sub">兼容原有 `#donate-widget-container` 接入方式，同时支持多实例 `data-donate-widget`。默认无 jQuery 依赖，交互和可访问性全面升级。</p>
+        <div class="hero-tags">
+          <span class="tag">双轨兼容</span>
+          <span class="tag">多实例挂载</span>
+          <span class="tag">键盘可用</span>
+          <span class="tag">移动端优先</span>
+        </div>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="https://github.com/miaohancheng/donate-page" target="_blank" rel="noopener noreferrer">查看仓库</a>
+          <a class="btn btn-secondary" href="#quick-start">快速接入</a>
+        </div>
+      </section>
+      <aside class="hero-side">
+        <h2>升级重点</h2>
+        <p>保留旧接口，不阻断既有页面；新页面可直接采用 V2 能力。</p>
+        <ul>
+          <li>旧属性可直接沿用：`data-paypal-url` / `data-alipay-qr` / `data-wechat-qr`</li>
+          <li>新增：`data-theme`、`data-lang`、`data-title`、`data-show-github`</li>
+          <li>新增 API：`window.DonateWidget.init(selectorOrElement, options)`</li>
+          <li>默认外链安全：自动使用 `rel="noopener noreferrer"`</li>
+        </ul>
+      </aside>
+    </header>
 
-    <div class="header">
-        <h1>Donate Page 组件</h1>
-        <p>由 <a href="https://miaohancheng.com">Miao hancheng</a> 开发的捐赠按钮组件</p>
-    </div>
+    <main class="layout">
+      <section class="panel">
+        <h3>实时预览</h3>
+        <p>同页展示旧容器兼容与新容器多实例能力。</p>
 
-    <div class="section">
-        <h3>✨ JS 嵌入式集成 (推荐)</h3>
-        <p>这是推荐的集成方式，解决了 `iframe` 的交互限制，配置更灵活。</p>
-        <p>下方区域演示了通过 JS 动态加载的效果：</p>
-        <div id="js-embed-demo-area">
-            <div id="donate-widget-container"
+        <div class="preview-grid">
+          <div class="widget-card">
+            <h4>Legacy Container (`#donate-widget-container`)</h4>
+            <div
+              id="donate-widget-container"
+              data-paypal-url="https://paypal.me/miaohancheng"
+              data-alipay-qr="sample1/images/al.jpg"
+              data-wechat-qr="sample1/images/wx.jpg"
+              data-asset-base-url="sample1/images/"
+              data-github-url="https://github.com/miaohancheng/donate-page"
+              data-title="Donate"
             >
-                <p>正在加载捐赠小部件...</p>
+              <p>Widget is loading...</p>
             </div>
+          </div>
+
+          <div class="widget-card">
+            <h4>Modern Multi-instance (`data-donate-widget`)</h4>
+            <div
+              data-donate-widget
+              data-paypal-url="https://paypal.me/miaohancheng"
+              data-alipay-qr="sample1/images/al.jpg"
+              data-wechat-qr="sample1/images/wx.jpg"
+              data-asset-base-url="sample1/images/"
+              data-show-github="false"
+              data-title="Support This Project"
+              data-lang="auto"
+            >
+              <p>Widget is loading...</p>
+            </div>
+          </div>
         </div>
-        <p><strong>使用方法：</strong></p>
-        <ol>
-            <li>确保页面引入了 jQuery。</li>
-            <li>在 HTML 中添加占位符 <code>&lt;div id="donate-widget-container" [data-attributes...]&gt;&lt;/div&gt;</code>。</li>
-            <li>在页面底部引入脚本 <code>&lt;script src="YOUR_PATH/donate-embed.js" defer&gt;&lt;/script&gt;</code>。</li>
-            <li>将脚本和图片资源托管在你的服务器上，并正确配置 URL。</li>
-        </ol>
-        <p>详细说明请参考 <a href="https://github.com/miaohancheng/donate-page" target="_blank">项目 README 文件</a>。</p>
-    </div>
+      </section>
 
+      <section class="panel" id="quick-start">
+        <h3>快速接入</h3>
+        <p>推荐使用 `data-donate-widget`，并继续兼容旧写法。</p>
 
-    <div class="section">
-        <h3>原始样式示例 (iframe 或直接打开)</h3>
+<pre><code>&lt;div data-donate-widget
+  data-paypal-url="https://paypal.me/your-name"
+  data-alipay-qr="https://your.cdn/alipay.jpg"
+  data-wechat-qr="https://your.cdn/wechat.jpg"
+  data-asset-base-url="https://your.cdn/donate-icons/"
+  data-title="Support This Project"
+  data-lang="auto"
+  data-show-github="false"&gt;&lt;/div&gt;
 
-        <div>
-            <h4>样式一：翻转卡片</h4>
-            <p>原始版本，可以通过 iframe 嵌入或直接访问。</p>
-            <iframe src="https://miaohancheng.com/donate-page/sample1/index.html" style="overflow-x:hidden;overflow-y:hidden; border:0 none #fff; min-height:240px; width:100%;" frameborder="0" scrolling="no"></iframe>
+&lt;script src="/sample1/donate-embed.js" defer&gt;&lt;/script&gt;</code></pre>
 
+<pre><code>// Dynamic mount
+window.DonateWidget.init('.sidebar-donate', {
+  payPalUrl: 'https://paypal.me/your-name',
+  showGithub: false,
+  title: 'Tip Jar'
+});</code></pre>
+
+        <div class="legacy-section">
+          <h4>Legacy iframe（可继续使用）</h4>
+          <p>若你暂时不改造旧页面，仍可使用 `sample1/index.html`：</p>
+          <iframe src="sample1/index.html" title="Legacy Donate Widget"></iframe>
         </div>
-    </div>
+      </section>
+    </main>
 
-    <div class="section">
-        <h3>旧版 iframe 集成说明</h3>
-        <p>如果你仍需使用 iframe (不推荐)，可以使用以下代码嵌入样式一：</p>
-        <pre><code>&lt;iframe src="https://miaohancheng.com/donate-page/sample1/index.html" style="overflow-x:hidden;overflow-y:hidden; border:0 none #fff; min-height:240px; width:100%;" frameborder="0" scrolling="no"&gt;&lt;/iframe&gt;</code></pre>
-    </div>
+    <footer class="footer">
+      <p>&copy; <span id="year"></span> Donate Page. Built by <a href="https://miaohancheng.com" target="_blank" rel="noopener noreferrer">Miao hancheng</a>.</p>
+    </footer>
+  </div>
 
-    <div class="footer">
-        <p>&copy; <span id="year"></span> <a href="https://miaohancheng.com">Miao hancheng</a>. All Rights Reserved.</p>
-        <p>基于 <a href="https://github.com/miaohancheng/donate-page" target="_blank">Donate-Page</a> 项目</p>
-    </div>
-
-</div>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://miaohancheng.com/donate-page/sample1/donate-embed.js" defer></script> <script type="text/javascript">
-    // Set current year in footer
-    document.getElementById("year").innerText = new Date().getFullYear();
-</script>
+  <script src="sample1/donate-embed.js" defer></script>
+  <script>
+    document.getElementById('year').textContent = String(new Date().getFullYear());
+  </script>
 </body>
-
 </html>

@@ -1,55 +1,145 @@
-# Donate-Page
+# Donate Page
 
-提供几款不同的捐赠按钮样式，包含 PayPal、支付宝、微信支付方式，方便集成到你的项目中。
+现代化的捐赠组件，支持 PayPal、支付宝、微信二维码。
 
-**Demo 示例：** [在线演示](https://miaohancheng.com/donate-page/) 
+核心目标：在不破坏旧接入方式的前提下，提升接入效率、视觉质量、移动端体验和可访问性。
 
----
-
-## ✨ 新功能：JS 嵌入式集成 (推荐)
-
-为了解决 `iframe` 集成方式带来的交互限制（如点击外部无法关闭二维码、移动端二维码交互不便等问题），我们现在提供了一种更现代、更灵活的 JS 嵌入方式。
-
-**优点：**
-
-* **集成简单**：只需在你的 HTML 中添加一个 `div` 容器和一行 `<script>` 标签。
-* **交互友好**：二维码使用 `<img>` 标签展示，方便用户在微信等环境中长按识别或保存；点击组件外部区域可关闭二维码。
-* **配置灵活**：可以通过 `data-*` 属性轻松配置支付链接、二维码图片地址等。
-* **无需复制资源**：脚本会自动加载所需的 CSS 和图标资源（你需要将脚本和资源托管在服务器上）。
-
-**使用方法：**
-
-1.  **确保页面已加载 jQuery**：此脚本依赖 jQuery。
-2.  **添加 HTML 占位符**：在你想要显示捐赠按钮的位置添加一个 `div`：
-    ```html
-    <div id="donate-widget-container"
-         data-paypal-url="[https://paypal.me/your-paypal](https://paypal.me/your-paypal)" data-alipay-qr="[https://your-domain.com/images/your-alipay.jpg](https://your-domain.com/images/your-alipay.jpg)" data-wechat-qr="[https://your-domain.com/images/your-wechat.jpg](https://your-domain.com/images/your-wechat.jpg)" data-asset-base-url="[https://your-domain.com/donate-assets/images/](https://your-domain.com/donate-assets/images/)" data-github-url="[https://github.com/your-repo](https://github.com/your-repo)" >
-        </div>
-    ```
-    * `id` 必须是 `donate-widget-container`。
-    * `data-*` 属性是可选的，如果不提供，脚本会使用内置的默认值（但建议你提供自己的 URL）。
-3.  **引入 JS 脚本**：在 `</body>` 标签前引入托管的 `donate-embed.js` 文件：
-    ```html
-    <script src="[https://your-domain.com/path/to/donate-embed.js](https://your-domain.com/path/to/donate-embed.js)" defer></script>
-    ```
-    * 将 `https://your-domain.com/path/to/donate-embed.js` 替换为你实际托管脚本的 URL。
-    * 如果不想部署可以直接使用 `https://miaohancheng.com/donate-page/sample1/donate-embed.js` ，但要记得传入收款码、paypal相关地址，其余图片会自动加载
-4.  **托管资源**：你需要将 `donate-embed.js` 文件、`sample1/images/` 目录下的所有图标文件 (`like.svg`, `paypal.svg`, `alipay.svg`, `wechat.svg`, `github.svg`) 以及你的二维码图片托管到你的服务器或 CDN 上，并确保上述配置中的 URL 正确无误。
+- 在线演示：<https://miaohancheng.com/donate-page/>
+- Legacy 页面：<https://miaohancheng.com/donate-page/sample1/index.html>
 
 ---
 
-## 样式预览
+## V2 能力
 
-### 样式一：翻转卡片 (JS 嵌入脚本基于此样式)
+- 双轨兼容：保留 `#donate-widget-container` + 原 `data-*` 属性。
+- 多实例挂载：支持任意数量 `[data-donate-widget]`。
+- 无 jQuery 依赖：纯原生 JS。
+- 可访问性增强：语义化按钮、键盘可用（Tab/Enter/Space/Escape）、可见焦点。
+- 移动端友好：二维码弹层可长按识别，支持 `prefers-reduced-motion`。
+- 安全默认：所有 `_blank` 外链使用 `rel="noopener noreferrer"`。
 
-* **在线演示**：[./sample1/index.html](https://miaohancheng.com/donate-page/sample1/index.html) (原始 iframe 版本)
-* **JS 嵌入**：查看上面的 **JS 嵌入式集成** 说明。
-* ![翻转卡片动图](./sample1/images/example.gif "翻转卡片动图")
+---
 
-## 原始 iframe 集成方式 (旧版)
+## 快速接入（推荐）
 
-如果你仍希望使用 iframe 方式（不推荐），可以参考 `sample1`  目录下的说明。
+### 1) 添加容器
 
-例如，嵌入样式一：
 ```html
-<iframe src="[https://miaohancheng.com/donate-page/sample1/index.html](https://miaohancheng.com/donate-page/sample1/index.html)" style="overflow-x:hidden;overflow-y:hidden; border:0 none #fff; min-height:240px; width:100%;" frameborder="0" scrolling="no"></iframe>
+<div data-donate-widget
+     data-paypal-url="https://paypal.me/your-name"
+     data-alipay-qr="https://your-cdn.com/alipay.jpg"
+     data-wechat-qr="https://your-cdn.com/wechat.jpg"
+     data-asset-base-url="https://your-cdn.com/donate-icons/"
+     data-title="Support This Project"
+     data-lang="auto"
+     data-show-github="false">
+</div>
+```
+
+### 2) 引入脚本
+
+```html
+<script src="/sample1/donate-embed.js" defer></script>
+```
+
+---
+
+## 旧接入方式（兼容保留）
+
+旧页面无需改动，以下写法仍可继续使用：
+
+```html
+<div id="donate-widget-container"
+     data-paypal-url="https://paypal.me/your-name"
+     data-alipay-qr="https://your-cdn.com/alipay.jpg"
+     data-wechat-qr="https://your-cdn.com/wechat.jpg"
+     data-asset-base-url="https://your-cdn.com/donate-icons/"
+     data-github-url="https://github.com/your-repo">
+</div>
+<script src="/sample1/donate-embed.js" defer></script>
+```
+
+> 说明：脚本会自动扫描 `#donate-widget-container` 与 `[data-donate-widget]`，并去重初始化。
+
+---
+
+## 全局 API
+
+脚本会暴露 `window.DonateWidget`：
+
+```js
+window.DonateWidget.init(selectorOrElement, options)
+window.DonateWidget.initAll(options)
+```
+
+### `init(selectorOrElement, options)`
+
+- `selectorOrElement`: CSS 选择器、DOM 元素、NodeList 或元素数组。
+- `options`: 运行时配置，会覆盖 `data-*`。
+
+### 配置项
+
+- `payPalUrl`：PayPal 链接。
+- `aliPayQrUrl`：支付宝二维码图片地址。
+- `weChatQrUrl`：微信二维码图片地址。
+- `assetBaseUrl`：图标资源目录（末尾可省略 `/`）。
+- `githubUrl`：GitHub 链接。
+- `theme`：主题，默认 `light`。
+- `lang`：`auto | zh | en`，默认 `auto`。
+- `title`：组件标题，默认 `Donate`。
+- `showGithub`：是否显示 GitHub 按钮，默认 `true`。
+
+优先级：`options > data-* > defaults`
+
+---
+
+## Legacy iframe 集成（降级方案）
+
+```html
+<iframe src="/sample1/index.html"
+        style="overflow:hidden;border:0;min-height:240px;width:100%;"
+        frameborder="0"
+        scrolling="no"></iframe>
+```
+
+---
+
+## 常见问题排查
+
+### 1) 组件没有渲染
+
+- 检查容器是否存在（`#donate-widget-container` 或 `[data-donate-widget]`）。
+- 检查 `donate-embed.js` 是否成功加载（Network 200）。
+
+### 2) 图标或二维码不显示
+
+- 确认 `data-asset-base-url`、`data-alipay-qr`、`data-wechat-qr` 路径可访问。
+- 二维码图片建议使用 HTTPS 并允许跨域访问。
+
+### 3) 动态插入 DOM 后不生效
+
+- 在内容插入后手动调用：
+
+```js
+window.DonateWidget.init('.new-widget-container');
+```
+
+### 4) 点击 PayPal 没有跳转
+
+- 组件默认会弹确认框；确认后才会新开页跳转。
+- 若浏览器拦截弹窗，请允许当前站点打开新标签页。
+
+---
+
+## 文件说明
+
+- `index.html`：V2 落地页（现代简洁展示 + 实时预览）。
+- `sample1/donate-embed.js`：V2 核心嵌入脚本。
+- `sample1/index.html`：Legacy 示例页（iframe 可直接引用）。
+- `sample1/style.css` / `sample1/script.js`：Legacy 页面样式与脚本。
+
+---
+
+## License
+
+MIT

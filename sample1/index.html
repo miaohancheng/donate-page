@@ -1,26 +1,49 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-	<meta charset="UTF-8">
-	<title>Donate-Page</title>
-	<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, maximum-scale=1.0, minimal-ui" /><!--禁止缩放-->
-	<link rel="stylesheet" href="style.css">
-    <script type="text/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.5.10/clipboard.min.js"></script>
-	<!-- clipboard.js 是 JS 复制文本的库 -->
-	<script src="script.js"></script>
-	<script src="donate-embed.js"></script>
+  <meta charset="UTF-8">
+  <title>Donate-Page Legacy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
 </head>
-<body style="background:transparent;">
-	<a id="github" href="https://github.com/miaohancheng/donate-page" target="_blank" class="pos-f tr3" title="Github"></a>
-	<div id="DonateText" class="tr3">Donate</div>
-	<ul id="donateBox" class="list pos-f tr3">
-		<li id="PayPal"><a href="https://paypal.me/miaohancheng" target="_blank" title="PayPal付款页">PayPal</a></li>
-		<li id="AliPay" data-footnote="点击查看支付宝付款码"><a  title="支付宝付款码">AliPay</a></li>
-		<li id="WeChat" data-footnote="点击查看微信付款码"><a  title="微信付款码">WeChat</a></li>
-	</ul>
-	<div id="QRBox" class="pos-f left-100">
-		<div id="MainBox"></div>
-	</div>
+<body class="legacy-body">
+  <main class="legacy-widget" aria-label="Legacy donate widget">
+    <a
+      id="github"
+      href="https://github.com/miaohancheng/donate-page"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="pos-f tr3"
+      title="Github"
+      aria-label="GitHub"
+    ></a>
+
+    <p id="DonateText" class="tr3">Donate</p>
+
+    <ul id="donateBox" class="list pos-f tr3" aria-label="Donate methods">
+      <li id="PayPal">
+        <a href="https://paypal.me/miaohancheng" target="_blank" rel="noopener noreferrer" title="PayPal 付款页">PayPal</a>
+      </li>
+      <li id="AliPay" data-footnote="点击查看支付宝付款码">
+        <button type="button" class="donate-btn" data-method="alipay" aria-label="查看支付宝二维码">AliPay</button>
+      </li>
+      <li id="WeChat" data-footnote="点击查看微信付款码">
+        <button type="button" class="donate-btn" data-method="wechat" aria-label="查看微信二维码">WeChat</button>
+      </li>
+    </ul>
+
+    <div id="QRBox" class="pos-f left-100" hidden>
+      <section id="MainBox" role="dialog" aria-modal="true" aria-label="收款二维码">
+        <header class="legacy-qr-header">
+          <h2 id="LegacyQRTitle" class="legacy-qr-title">二维码</h2>
+          <button id="CloseQR" type="button" class="legacy-qr-close" aria-label="关闭二维码">×</button>
+        </header>
+        <figure class="legacy-qr-figure">
+          <img id="LegacyQRImage" alt="支付二维码" loading="lazy">
+        </figure>
+      </section>
+    </div>
+  </main>
 </body>
 </html>

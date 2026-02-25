@@ -1,80 +1,123 @@
-jQuery(document).ready(function() {
-    var QRBox    = $('#QRBox');
-    var MainBox  = $('#MainBox');
-    // 确保这些图片路径相对于 sample1/index.html 是正确的
-    var AliPayQR = 'images/al.jpg';
-    var WeChanQR = 'images/wx.jpg';
+(function () {
+  'use strict';
 
-    // --- PayPal 点击确认 ---
-    $('#PayPal a').on('click', function(event) {
-        event.preventDefault(); // 阻止默认的链接跳转行为
-        // 弹出确认对话框
-        var confirmLeave = confirm("您即将离开当前页面跳转到 PayPal 进行付款，确定要继续吗？");
-        if (confirmLeave) {
-            // 如果用户确认，则在新标签页中打开链接
-            window.open(this.href, '_blank');
+  var SHOW_CLASS = 'showQR';
+  var HIDE_CLASS = 'hideQR';
+  var ACTIVE_CLASS = 'is-active';
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var donateText = document.getElementById('DonateText');
+    var donateBox = document.getElementById('donateBox');
+    var github = document.getElementById('github');
+    var qrBox = document.getElementById('QRBox');
+    var mainBox = document.getElementById('MainBox');
+    var qrImage = document.getElementById('LegacyQRImage');
+    var qrTitle = document.getElementById('LegacyQRTitle');
+    var closeButton = document.getElementById('CloseQR');
+
+    if (!donateBox || !qrBox || !mainBox || !qrImage || !qrTitle || !closeButton) {
+      return;
+    }
+
+    var blurTargets = [donateText, donateBox, github].filter(Boolean);
+    var lastTrigger = null;
+
+    var qrConfig = {
+      alipay: {
+        title: '支付宝',
+        url: 'images/al.jpg',
+        alt: '支付宝收款二维码'
+      },
+      wechat: {
+        title: '微信',
+        url: 'images/wx.jpg',
+        alt: '微信收款二维码'
+      }
+    };
+
+    var payPalLink = document.querySelector('#PayPal a');
+    if (payPalLink) {
+      payPalLink.addEventListener('click', function (event) {
+        event.preventDefault();
+        var confirmed = window.confirm('您即将离开当前页面跳转到 PayPal 进行付款，确定要继续吗？');
+        if (confirmed) {
+          window.open(this.href, '_blank', 'noopener');
         }
+      });
+    }
+
+    donateBox.addEventListener('click', function (event) {
+      var trigger = event.target.closest('[data-method]');
+      if (!trigger) {
+        return;
+      }
+
+      var method = trigger.getAttribute('data-method');
+      if (!qrConfig[method]) {
+        return;
+      }
+
+      event.preventDefault();
+      showQR(method, trigger);
     });
-    // --- PayPal 点击确认结束 ---
 
+    qrBox.addEventListener('click', function (event) {
+      if (event.target === qrBox) {
+        hideQR();
+      }
+    });
 
-    // 定义关闭二维码显示的函数 (保持不变)
+    closeButton.addEventListener('click', function () {
+      hideQR();
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && qrBox.classList.contains(ACTIVE_CLASS)) {
+        hideQR();
+      }
+    });
+
+    function showQR(method, trigger) {
+      var entry = qrConfig[method];
+      if (!entry) {
+        return;
+      }
+
+      lastTrigger = trigger || null;
+      qrTitle.textContent = entry.title;
+      qrImage.src = entry.url;
+      qrImage.alt = entry.alt;
+
+      blurTargets.forEach(function (node) {
+        node.classList.add('blur');
+      });
+
+      qrBox.hidden = false;
+      qrBox.classList.add(ACTIVE_CLASS);
+      mainBox.classList.remove(HIDE_CLASS);
+      mainBox.classList.add(SHOW_CLASS);
+
+      closeButton.focus();
+    }
+
     function hideQR() {
-        MainBox.removeClass('showQR').addClass('hideQR');
-        setTimeout(function() {
-            QRBox.fadeOut(300, function() {
-                MainBox.removeClass('hideQR');
-            });
-            $('#DonateText, #donateBox, #github').removeClass('blur');
-            // 关闭后解绑 ESC 和点击事件的命名空间
-            $(document).off('keydown.dismissQR click.dismissQR');
-        }, 600);
-    }
+      mainBox.classList.remove(SHOW_CLASS);
+      mainBox.classList.add(HIDE_CLASS);
 
-    // 定义显示二维码的函数 (修改了 document 点击事件的绑定逻辑)
-    function showQR(QR) {
-        if (QR) {
-            MainBox.css('background-image', 'url(' + QR + ')');
-        }
-        $('#DonateText, #donateBox, #github').addClass('blur');
-        QRBox.fadeIn(300, function() {
-            MainBox.addClass('showQR');
+      window.setTimeout(function () {
+        qrBox.hidden = true;
+        qrBox.classList.remove(ACTIVE_CLASS);
+        mainBox.classList.remove(HIDE_CLASS);
+        qrImage.removeAttribute('src');
+
+        blurTargets.forEach(function (node) {
+          node.classList.remove('blur');
         });
 
-        // 绑定 ESC 键事件 (保持不变)
-        $(document).on('keydown.dismissQR', function(event) {
-            if (event.which === 27) { // 27 是 ESC 键码
-                hideQR();
-            }
-        });
-
-        // --- 修改后的 Document 点击监听器 ---
-        // 绑定 document 点击事件：点击任何地方都会关闭二维码
-        // 使用 setTimeout 防止打开二维码的点击事件冒泡导致立即关闭
-        setTimeout(function() {
-            $(document).on('click.dismissQR', function(e) {
-                // 无需检查点击位置，直接隐藏
-                hideQR();
-            });
-        }, 0); // 0ms延迟确保在当前事件处理完成后再绑定
-        // --- 修改后的 Document 点击监听器结束 ---
-    }
-
-    // 为支付宝和微信按钮绑定点击事件以显示二维码
-    $('#donateBox>li').click(function(event) {
-        var thisID = $(this).attr('id');
-        if (thisID === 'AliPay') {
-            event.stopPropagation(); // 阻止事件冒泡，避免触发 document 的 click.dismissQR
-            showQR(AliPayQR);
-        } else if (thisID === 'WeChat') {
-            event.stopPropagation(); // 阻止事件冒泡
-            showQR(WeChanQR);
+        if (lastTrigger && typeof lastTrigger.focus === 'function') {
+          lastTrigger.focus();
         }
-        // PayPal 的点击由其独立的事件处理器处理，这里不做操作
-    });
-
-    // 不再需要单独为 MainBox 绑定点击事件来关闭，因为 document 的点击事件已覆盖
-    // MainBox.click(function(event) {
-    //     hideQR();
-    // });
-});
+      }, 220);
+    }
+  });
+})();

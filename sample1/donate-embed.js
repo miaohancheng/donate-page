@@ -1,434 +1,719 @@
-    /**
-     * Donate Widget Embed Script
-     *
-     * Usage:
-     * 1. Include jQuery on your page.
-     * 2. Add <div id="donate-widget-container" [data-attributes...]></div> where you want the widget.
-     * 3. Include this script using <script src="path/to/this/donate-embed.js" defer></script.
-     * 4. Host this script and all required image assets (icons, QR codes) on a server/CDN.
-     * 5. Configure URLs via data-* attributes on the container div or modify the defaults below.
-     *
-     * MODIFIED: Uses position:absolute, with left/top values adjusted to visually match the original iframe fixed layout.
-     * Also adjusted z-index to match original stacking order (donateBox above DonateText).
-     * ADDED: Multi-language support for PayPal confirmation message based on browser language.
-     */
-    (function() {
-        // Wait for the DOM to be fully loaded
-        document.addEventListener('DOMContentLoaded', function() {
+/**
+ * Donate Widget Embed Script (V2)
+ *
+ * Backward compatible:
+ * - Supports legacy container id: #donate-widget-container
+ * - Supports legacy data attributes: data-paypal-url, data-alipay-qr, data-wechat-qr,
+ *   data-asset-base-url, data-github-url
+ *
+ * New features:
+ * - Multi-instance mounts via [data-donate-widget]
+ * - No jQuery dependency
+ * - Accessible dialog / keyboard support
+ * - Global API: window.DonateWidget.init(selectorOrElement, options)
+ */
+(function () {
+  'use strict';
 
-            // --- Configuration ---
-            const containerId = 'donate-widget-container'; // ID of the placeholder div
-            const container = document.getElementById(containerId);
+  var STYLE_ID = 'donate-widget-style';
+  var LEGACY_CONTAINER_ID = 'donate-widget-container';
 
-            // Check if the container element exists
-            if (!container) {
-                console.error(`Donate Widget Error: Container element with id "${containerId}" not found.`);
-                return;
-            }
+  var instances = new WeakMap();
 
-            // Check for jQuery dependency
-            if (typeof jQuery === 'undefined') {
-                console.error("Donate Widget Error: jQuery is required but not found. Please include jQuery on your page before this script.");
-                // return; // Stop execution if jQuery is missing
-            }
-             // Use jQuery safely
-            const $ = jQuery;
+  var DEFAULTS = {
+    payPalUrl: 'https://paypal.me/miaohancheng',
+    aliPayQrUrl: 'https://miaohancheng.com/donate-page/sample1/images/al.jpg',
+    weChatQrUrl: 'https://miaohancheng.com/donate-page/sample1/images/wx.jpg',
+    githubUrl: 'https://github.com/miaohancheng/donate-page',
+    assetBaseUrl: 'https://miaohancheng.com/donate-page/sample1/images/',
+    theme: 'light',
+    lang: 'auto',
+    title: 'Donate',
+    showGithub: true
+  };
 
-            // --- Define Default URLs First ---
-            const defaultUrls = {
-                payPal: 'https://paypal.me/miaohancheng',
-                aliPayQr: 'https://miaohancheng.com/donate-page/sample1/images/al.jpg',
-                weChatQr: 'https://miaohancheng.com/donate-page/sample1/images/wx.jpg',
-                github: 'https://github.com/miaohancheng/donate-page',
-                assetBase: 'https://miaohancheng.com/donate-page/sample1/images/'
-            };
+  var I18N = {
+    zh: {
+      donate: '赞助',
+      payPal: 'PayPal',
+      aliPay: '支付宝',
+      weChat: '微信',
+      openAliPayQr: '打开支付宝二维码',
+      openWeChatQr: '打开微信二维码',
+      qrDialogLabel: '收款二维码',
+      qrImageAlt: '支付二维码',
+      closeDialog: '关闭二维码弹窗',
+      qrHint: '请使用对应 App 扫码或长按识别。',
+      qrLoadError: '二维码加载失败，请稍后重试。',
+      payPalConfirm: '您即将离开当前页面跳转到 PayPal 付款，是否继续？'
+    },
+    en: {
+      donate: 'Donate',
+      payPal: 'PayPal',
+      aliPay: 'AliPay',
+      weChat: 'WeChat',
+      openAliPayQr: 'Open AliPay QR code',
+      openWeChatQr: 'Open WeChat QR code',
+      qrDialogLabel: 'Payment QR code',
+      qrImageAlt: 'Payment QR code',
+      closeDialog: 'Close QR dialog',
+      qrHint: 'Use the matching app to scan this code.',
+      qrLoadError: 'Failed to load QR code. Please try again.',
+      payPalConfirm: 'You are leaving this page to continue payment on PayPal. Continue?'
+    }
+  };
 
-            // --- Read Configuration ---
-            const config = {
-                payPalUrl: container.dataset.paypalUrl || defaultUrls.payPal,
-                aliPayQrUrl: container.dataset.alipayQr || defaultUrls.aliPayQr,
-                weChatQrUrl: container.dataset.wechatQr || defaultUrls.weChatQr,
-                githubUrl: container.dataset.githubUrl,
-                assetBaseUrl: (container.dataset.assetBaseUrl || defaultUrls.assetBase).replace(/\/?$/, '/')
-            };
-            if (config.githubUrl === undefined && defaultUrls.github) {
-                 config.githubUrl = defaultUrls.github;
-            }
+  function toArray(input) {
+    if (!input) {
+      return [];
+    }
 
-            // --- 1. Inject CSS into <head> ---
-            injectCSS(config.assetBaseUrl, containerId);
+    if (typeof input === 'string') {
+      return Array.prototype.slice.call(document.querySelectorAll(input));
+    }
 
-            // --- 2. Create HTML Structure inside the container ---
-            createHTML(container, config);
+    if (input instanceof Element) {
+      return [input];
+    }
 
-            // --- 3. Initialize JavaScript Logic (Event Handlers etc.) ---
-            initializeLogic(config, containerId);
+    if (input instanceof NodeList || Array.isArray(input)) {
+      return Array.prototype.slice.call(input).filter(function (item) {
+        return item instanceof Element;
+      });
+    }
 
-        });
+    return [];
+  }
 
-        /**
-         * Injects necessary CSS rules into the document's <head>.
-         * MODIFIED: Uses position:absolute consistently. Adjusted left/top and z-index to match original fixed layout visually.
-         * @param {string} assetBaseUrl - The base URL for loading image assets (icons).
-         * @param {string} containerId - The ID of the widget container element.
-         */
-        function injectCSS(assetBaseUrl, containerId) {
-            // CSS rules using absolute positioning relative to the container
-            const css = `
-                #${containerId} {
-                    position: relative; /* Crucial for absolute positioning of children */
-                    min-height: 100px;   /* Ensure minimum space for the widget */
-                    min-width: 300px;   /* Ensure minimum space for the widget */
-                    font-family: "Helvetica Neue", Ubuntu, "WenQuanYi Micro Hei", Helvetica, "Hiragino Sans GB", "Microsoft YaHei", "Wenquanyi Micro Hei", "WenQuanYi Micro Hei Mono", "WenQuanYi Zen Hei", "WenQuanYi Zen Hei", "Apple LiGothic Medium", "SimHei", "ST Heiti", "WenQuanYi Zen Hei Sharp", Arial, sans-serif;
-                    -webkit-font-smoothing: antialiased;
-                    line-height: 1.8em;
-                    text-shadow: 0 0 1px rgba(255,255,255,0.1);
-                }
-                #${containerId} img { border-width: 0px; max-width: 100%; }
-                #${containerId} a { color: #000; text-decoration: none; outline:none; border:none; }
-                #${containerId} .list, #${containerId} .list li { list-style: none; list-style-type: none; margin: 0px; padding: 0px; }
-                #${containerId} .tr3 { transition: all .3s; }
-                #${containerId} .blur { filter: blur(3px); -webkit-filter: blur(3px); }
+  function normalizeBoolean(value, fallback) {
+    if (typeof value === 'boolean') {
+      return value;
+    }
 
-                /* --- Absolute Positioning for Key Elements --- */
-                #${containerId} #DonateText, #${containerId} #donateBox, #${containerId} #github, #${containerId} #QRBox {
-                    position: absolute; /* Use absolute positioning */
-                }
+    if (typeof value !== 'string') {
+      return fallback;
+    }
 
-                #${containerId} #DonateText {
-                    font-size: 12px;
-                    width: 70px;
-                    height: 70px;
-                    line-height: 70px;
-                    color: #fff;
-                    background: #ffd886 url(${assetBaseUrl}like.svg) no-repeat center 10px;
-                    background-size: 20px;
-                    border-radius: 35px;
-                    text-align: center;
-                    /* Original fixed positioning values */
-                    left: calc(50% - 120px);
-                    top: calc(50% - 60px);
-                    z-index: 9; /* Adjusted z-index (below donateBox) */
-                    transform: rotatez(-15deg);
-                }
+    var normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1' || normalized === 'yes') {
+      return true;
+    }
 
-                #${containerId} #donateBox {
-                    /* Original fixed positioning values */
-                    left: calc(50% - 115.5px); /* Adjusted to match original fixed */
-                    top: calc(50% - 15px);    /* Adjusted to match original fixed */
-                    background-color: #fff;
-                    border: 1px solid #ddd;
-                    border-radius: 6px;
-                    width: 225px;
-                    height: 28px;
-                    z-index: 10; /* Adjusted z-index (above DonateText) */
-                    display: flex;
-                }
+    if (normalized === 'false' || normalized === '0' || normalized === 'no') {
+      return false;
+    }
 
-                #${containerId} #donateBox li {
-                    width: 74px;
-                    flex: 1 1 74px;
-                    text-align: center;
-                    border-left: 1px solid #ddd;
-                    background: no-repeat center center;
-                    background-color: rgba(204, 217, 220, 0.1);
-                    background-size: 45px;
-                    transition: all .3s;
-                    cursor: pointer;
-                    overflow: hidden;
-                    line-height: 600px;
-                    height: 28px;
-                    filter: grayscale(1);
-                    -webkit-filter: grayscale(1);
-                    opacity: 0.5;
-                    position: relative; /* Needed for tooltip */
-                }
-                #${containerId} #donateBox li:hover {
-                    background-color: rgba(204, 217, 220, 0.3);
-                    filter: grayscale(0);
-                    -webkit-filter: grayscale(0);
-                    opacity: 1;
-                }
-                #${containerId} #donateBox>li:first-child { border-left-width: 0; }
-                #${containerId} #donateBox a { display: block; height: 100%; width: 100%; }
+    return fallback;
+  }
 
-                #${containerId} #donateBox #PayPal { background-image: url(${assetBaseUrl}paypal.svg); }
-                #${containerId} #donateBox #AliPay { background-image: url(${assetBaseUrl}alipay.svg); }
-                #${containerId} #donateBox #WeChat { background-image: url(${assetBaseUrl}wechat.svg); }
+  function trimOrEmpty(value) {
+    if (typeof value !== 'string') {
+      return '';
+    }
 
-                 /* QR Box Styling */
-                #${containerId} #QRBox {
-                    /* Original fixed positioning values (relative to container) */
-                    top: 0;
-                    left: 0;
-                    width: 100%; /* Cover the container */
-                    height: 100%;/* Cover the container */
-                    z-index: 100; /* Keep highest */
-                    background-color: transparent;
-                    display: none;
-                    perspective: 400px;
-                }
-                #${containerId} #MainBox {
-                    cursor: pointer;
-                    position: absolute; /* Keep absolute for centering within QRBox */
-                    text-align: center;
-                    width: 200px;
-                    height: 200px;
-                    left: 50%;
-                    top: 50%;
-                    transform: translate(-50%, -50%);
-                    background: #fff;
-                    border-radius: 6px;
-                    opacity: 0;
-                    transition: opacity 0.5s ease-in-out; /* Simplified transition */
-                    transform-style: preserve-3d;
-                    transform-origin: center center;
-                    overflow: hidden;
-                    padding: 5px;
-                    box-sizing: border-box;
-                    border: none;
-                    outline: none;
-                     box-shadow: 0px 2px 7px rgba(0,0,0,0.3);
-                }
-                 #${containerId} #qrCodeImage {
-                     max-width: 100%;
-                     max-height: 100%;
-                     display: block;
-                     margin: auto;
-                 }
+    return value.trim();
+  }
 
-                /* Github Link Styling */
-                #${containerId} #github {
-                    width: 24px;
-                    height: 24px;
-                    /* Original fixed positioning values */
-                    left: calc(50% + 98.5px); /* Adjusted to match original fixed */
-                    top: calc(50% - 30px);   /* Adjusted to match original fixed */
-                    background: no-repeat center center url(${assetBaseUrl}github.svg);
-                    background-size: contain;
-                    opacity: 0.3;
-                    transform: rotatez(15deg);
-                    z-index: 9; /* Keep same level as DonateText */
-                     transition: all .3s;
-                }
-                 #${containerId} #github:hover {
-                     opacity: 0.8;
-                 }
+  function normalizeAssetBase(value) {
+    var url = trimOrEmpty(value);
+    if (!url) {
+      return '';
+    }
 
-                /* Tooltip Styles (data-footnote) */
-                #${containerId} [data-footnote] {
-                    position: relative;
-                    overflow: hidden;
-                }
-                #${containerId} [data-footnote]:hover { overflow: visible; }
-                #${containerId} [data-footnote]::before, #${containerId} [data-footnote]::after {
-                    position: absolute;
-                    transition: all .3s;
-                    transform: translate3d(-50%,0,0);
-                    opacity: 0;
-                    left: 50%;
-                    z-index: 110; /* Keep above QRBox */
-                    pointer-events: none;
-                }
-                #${containerId} [data-footnote]::before {
-                    content: attr(data-footnote);
-                    border-radius: 4px;
-                    background-color: rgba(50,50,50,0.9);
-                    color: #fff;
-                    height: auto;
-                    line-height: 1.4;
-                    padding: 4px 8px;
-                    font-size: 12px;
-                    white-space: nowrap;
-                    top: -30px;
-                }
-                #${containerId} [data-footnote]::after {
-                    content: '';
-                    border: 5px solid transparent;
-                    border-top-color: rgba(50,50,50,0.9);
-                    top: -10px;
-                }
-                #${containerId} [data-footnote]:hover::before, #${containerId} [data-footnote]:hover::after {
-                    opacity: 1;
-                    transform: translate3d(-50%, -5px, 0);
-                }
+    return url.replace(/\/?$/, '/');
+  }
 
-                /* Animation Keyframes */
-                @keyframes donateWidgetShowQR {
-                     from { transform: translate(-50%, -50%) rotateX(90deg); opacity: 0; }
-                     to { transform: translate(-50%, -50%) rotateX(0deg); opacity: 1; }
-                }
-                @keyframes donateWidgetHideQR {
-                    from { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-                    to { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
-                }
+  function resolveTextLang(langPref) {
+    var value = (langPref || 'auto').toLowerCase();
+    if (value !== 'auto') {
+      return value.indexOf('zh') === 0 ? 'zh' : 'en';
+    }
 
-                #${containerId} #MainBox.showQR {
-                    opacity: 1;
-                    animation: donateWidgetShowQR 0.5s ease-out forwards;
-                }
-                #${containerId} #MainBox.hideQR {
-                    opacity: 0;
-                    animation: donateWidgetHideQR 0.4s ease-in forwards;
-                }
-            `;
-            const styleElement = document.createElement('style');
-            styleElement.type = 'text/css';
-            styleElement.appendChild(document.createTextNode(css));
-            document.head.appendChild(styleElement);
-        }
+    var navLang = (navigator.language || 'en').toLowerCase();
+    return navLang.indexOf('zh') === 0 ? 'zh' : 'en';
+  }
 
-        /**
-         * Creates the necessary HTML elements within the container.
-         * @param {HTMLElement} container - The container element to populate.
-         * @param {object} config - The configuration object with URLs.
-         */
-        function createHTML(container, config) {
-            // Clear container first
-            container.innerHTML = '';
-            let githubLinkHTML = '';
-            if (config.githubUrl) {
-                githubLinkHTML = `<a id="github" href="${config.githubUrl}" target="_blank" title="Github" class="tr3"></a>`; // Added class back
-            }
+  function localize(lang) {
+    return I18N[lang] || I18N.en;
+  }
 
-            container.innerHTML = `
-                ${githubLinkHTML}
-                <div id="DonateText" class="tr3">Donate</div>
-                <ul id="donateBox" class="list tr3">
-                    <li id="PayPal" data-footnote="通过 PayPal 付款"><a href="${config.payPalUrl}" target="_blank" title="PayPal付款页">PayPal</a></li>
-                    <li id="AliPay" data-footnote="点击查看支付宝二维码"><a title="支付宝付款码">AliPay</a></li>
-                    <li id="WeChat" data-footnote="点击查看微信二维码"><a title="微信付款码">WeChat</a></li>
-                </ul>
-                <div id="QRBox"> <div id="MainBox">
-                        </div>
-                </div>
-            `;
-        }
+  function parseDataset(element) {
+    var d = element.dataset || {};
 
-        /**
-         * Initializes the JavaScript event listeners and logic.
-         * @param {object} config - The configuration object with URLs.
-         * @param {string} containerId - The ID of the widget container element.
-         */
-        function initializeLogic(config, containerId) {
-            const $ = jQuery;
+    return {
+      payPalUrl: trimOrEmpty(d.paypalUrl),
+      aliPayQrUrl: trimOrEmpty(d.alipayQr),
+      weChatQrUrl: trimOrEmpty(d.wechatQr),
+      githubUrl: trimOrEmpty(d.githubUrl),
+      assetBaseUrl: normalizeAssetBase(d.assetBaseUrl),
+      theme: trimOrEmpty(d.theme),
+      lang: trimOrEmpty(d.lang),
+      title: trimOrEmpty(d.title),
+      showGithub: d.showGithub
+    };
+  }
 
-            // --- Translations for PayPal Confirmation ---
-            // Add more languages as needed
-            const translations = {
-                'en': 'You are about to leave this page to make a payment via PayPal. Are you sure you want to continue?',
-                'en-US': 'You are about to leave this page to make a payment via PayPal. Are you sure you want to continue?',
-                'en-GB': 'You are about to leave this page to make a payment via PayPal. Are you sure you want to continue?',
-                'zh': '您即将离开当前页面跳转到 PayPal 进行付款，确定要继续吗？',
-                'zh-CN': '您即将离开当前页面跳转到 PayPal 进行付款，确定要继续吗？',
-                'zh-TW': '您即將離開目前頁面跳轉到 PayPal 進行付款，確定要繼續嗎？',
-                'ja': 'このページを離れてPayPalで支払います。続行してもよろしいですか？', // Japanese example
-                'ko': 'PayPal을 통해 결제하기 위해 이 페이지를 떠나려고 합니다. 계속하시겠습니까?', // Korean example
-                'es': 'Está a punto de salir de esta página para realizar un pago a través de PayPal. ¿Está seguro de que desea continuar?', // Spanish example
-                'fr': 'Vous êtes sur le point de quitter cette page pour effectuer un paiement via PayPal. Êtes-vous sûr de vouloir continuer ?', // French example
-                'de': 'Sie sind dabei, diese Seite zu verlassen, um eine Zahlung über PayPal vorzunehmen. Möchten Sie wirklich fortfahren?', // German example
-            };
+  function mergeConfig(element, options) {
+    var datasetConfig = parseDataset(element);
+    var runtimeOptions = options || {};
 
-            const containerSel = `#${containerId}`;
-            const QRBox    = $(`${containerSel} #QRBox`);
-            const MainBox  = $(`${containerSel} #MainBox`);
-            const donateBoxItems = $(`${containerSel} #donateBox>li`);
-            const otherElements = $(`${containerSel} #DonateText, ${containerSel} #donateBox, ${containerSel} #github`);
+    var config = {
+      payPalUrl: trimOrEmpty(runtimeOptions.payPalUrl || datasetConfig.payPalUrl || DEFAULTS.payPalUrl),
+      aliPayQrUrl: trimOrEmpty(runtimeOptions.aliPayQrUrl || datasetConfig.aliPayQrUrl || DEFAULTS.aliPayQrUrl),
+      weChatQrUrl: trimOrEmpty(runtimeOptions.weChatQrUrl || datasetConfig.weChatQrUrl || DEFAULTS.weChatQrUrl),
+      githubUrl: trimOrEmpty(runtimeOptions.githubUrl || datasetConfig.githubUrl || DEFAULTS.githubUrl),
+      assetBaseUrl: normalizeAssetBase(runtimeOptions.assetBaseUrl || datasetConfig.assetBaseUrl || DEFAULTS.assetBaseUrl),
+      theme: trimOrEmpty(runtimeOptions.theme || datasetConfig.theme || DEFAULTS.theme) || DEFAULTS.theme,
+      lang: trimOrEmpty(runtimeOptions.lang || datasetConfig.lang || DEFAULTS.lang) || DEFAULTS.lang,
+      title: trimOrEmpty(runtimeOptions.title || datasetConfig.title || DEFAULTS.title) || DEFAULTS.title,
+      showGithub: normalizeBoolean(
+        runtimeOptions.showGithub !== undefined ? runtimeOptions.showGithub : datasetConfig.showGithub,
+        DEFAULTS.showGithub
+      )
+    };
 
-            // --- PayPal Click Confirmation (Multi-language) ---
-            $(`${containerSel} #PayPal a`).off('click.donate').on('click.donate', function(event) {
-                event.preventDefault();
+    config.textLang = resolveTextLang(config.lang);
+    config.t = localize(config.textLang);
 
-                // Get browser language
-                const userLang = navigator.language || 'en'; // Default to 'en'
-                const baseLang = userLang.split('-')[0]; // Get base language (e.g., 'en' from 'en-US')
+    return config;
+  }
 
-                // Find the appropriate message
-                // Check full language code first (e.g., 'zh-CN'), then base language (e.g., 'zh'), then fallback to English ('en')
-                const message = translations[userLang] || translations[baseLang] || translations['en'];
+  function ensureStyle() {
+    if (document.getElementById(STYLE_ID)) {
+      return;
+    }
 
-                // Show confirmation dialog with the selected message
-                const confirmLeave = confirm(message);
-                if (confirmLeave) {
-                    window.open(this.href, '_blank');
-                }
-            });
+    var style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = [
+      '.dw-root{',
+      '  --dw-bg:#f6f8fb;',
+      '  --dw-card:#ffffff;',
+      '  --dw-card-soft:#f2f5f9;',
+      '  --dw-text:#102132;',
+      '  --dw-muted:#5b6d80;',
+      '  --dw-primary:#0f8f82;',
+      '  --dw-primary-strong:#0b6e64;',
+      '  --dw-border:rgba(16,33,50,.14);',
+      '  --dw-shadow:0 16px 40px rgba(16,33,50,.12);',
+      '  --dw-radius:18px;',
+      '  --dw-action-height:52px;',
+      '  --dw-focus:#f1a63b;',
+      '  position:relative;',
+      '  min-height:170px;',
+      '  width:100%;',
+      '  font-family:"Manrope","Avenir Next","PingFang SC","Noto Sans SC","Helvetica Neue",sans-serif;',
+      '  color:var(--dw-text);',
+      '}',
+      '.dw-root,.dw-root *{box-sizing:border-box;}',
+      '.dw-root[data-theme="light"]{}',
+      '.dw-shell{',
+      '  position:relative;',
+      '  display:grid;',
+      '  gap:14px;',
+      '  align-items:center;',
+      '  padding:16px;',
+      '  border:1px solid var(--dw-border);',
+      '  border-radius:var(--dw-radius);',
+      '  background:linear-gradient(135deg,#ffffff 0%,var(--dw-card-soft) 100%);',
+      '  box-shadow:var(--dw-shadow);',
+      '}',
+      '.dw-heading{',
+      '  display:flex;',
+      '  align-items:center;',
+      '  gap:10px;',
+      '  margin:0;',
+      '  font-size:14px;',
+      '  font-weight:700;',
+      '  letter-spacing:.08em;',
+      '  text-transform:uppercase;',
+      '  color:var(--dw-muted);',
+      '}',
+      '.dw-like{',
+      '  width:34px;',
+      '  height:34px;',
+      '  border-radius:999px;',
+      '  background:#ffd98b center/18px no-repeat;',
+      '  flex:0 0 auto;',
+      '}',
+      '.dw-actions{',
+      '  display:grid;',
+      '  grid-template-columns:repeat(3,minmax(0,1fr));',
+      '  gap:8px;',
+      '}',
+      '.dw-action{',
+      '  position:relative;',
+      '  display:flex;',
+      '  align-items:center;',
+      '  justify-content:center;',
+      '  height:var(--dw-action-height);',
+      '  border-radius:14px;',
+      '  border:1px solid var(--dw-border);',
+      '  background:var(--dw-card);',
+      '  color:transparent;',
+      '  text-decoration:none;',
+      '  cursor:pointer;',
+      '  transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease,opacity .2s ease;',
+      '  outline:none;',
+      '}',
+      '.dw-action::before{',
+      '  content:"";',
+      '  width:40px;',
+      '  height:28px;',
+      '  background:var(--dw-icon) center/contain no-repeat;',
+      '}',
+      '.dw-action:hover{',
+      '  transform:translateY(-1px);',
+      '  box-shadow:0 10px 18px rgba(16,33,50,.12);',
+      '  border-color:rgba(15,143,130,.45);',
+      '}',
+      '.dw-action:focus-visible,.dw-github:focus-visible,.dw-close:focus-visible{',
+      '  outline:2px solid var(--dw-focus);',
+      '  outline-offset:2px;',
+      '}',
+      '.dw-action[disabled]{',
+      '  cursor:not-allowed;',
+      '  opacity:.45;',
+      '  filter:grayscale(1);',
+      '}',
+      '.dw-meta{',
+      '  display:flex;',
+      '  justify-content:flex-end;',
+      '  align-items:center;',
+      '}',
+      '.dw-github{',
+      '  width:26px;',
+      '  height:26px;',
+      '  border-radius:50%;',
+      '  border:1px solid var(--dw-border);',
+      '  background:var(--dw-card) var(--dw-icon-github) center/15px no-repeat;',
+      '  opacity:.8;',
+      '  transition:opacity .2s ease, transform .2s ease;',
+      '}',
+      '.dw-github:hover{opacity:1;transform:translateY(-1px);}',
+      '.dw-overlay{',
+      '  position:fixed;',
+      '  inset:0;',
+      '  background:rgba(8,22,34,.45);',
+      '  display:none;',
+      '  align-items:center;',
+      '  justify-content:center;',
+      '  padding:18px;',
+      '  z-index:9999;',
+      '}',
+      '.dw-overlay.is-open{display:flex;}',
+      '.dw-dialog{',
+      '  width:min(92vw,320px);',
+      '  border-radius:16px;',
+      '  background:var(--dw-card);',
+      '  border:1px solid rgba(16,33,50,.1);',
+      '  box-shadow:0 18px 48px rgba(16,33,50,.28);',
+      '  padding:14px;',
+      '  display:grid;',
+      '  gap:10px;',
+      '  transform:translateY(8px) scale(.98);',
+      '  opacity:0;',
+      '  transition:transform .22s ease, opacity .22s ease;',
+      '}',
+      '.dw-overlay.is-open .dw-dialog{',
+      '  transform:translateY(0) scale(1);',
+      '  opacity:1;',
+      '}',
+      '.dw-dialog-head{',
+      '  display:flex;',
+      '  align-items:center;',
+      '  justify-content:space-between;',
+      '  gap:10px;',
+      '}',
+      '.dw-dialog-title{',
+      '  margin:0;',
+      '  font-size:14px;',
+      '  font-weight:700;',
+      '  color:var(--dw-text);',
+      '}',
+      '.dw-close{',
+      '  width:30px;',
+      '  height:30px;',
+      '  border-radius:10px;',
+      '  border:1px solid var(--dw-border);',
+      '  background:var(--dw-card-soft);',
+      '  color:var(--dw-text);',
+      '  cursor:pointer;',
+      '  font-size:18px;',
+      '  line-height:1;',
+      '}',
+      '.dw-qr-wrap{',
+      '  margin:0;',
+      '  border-radius:12px;',
+      '  background:var(--dw-card-soft);',
+      '  border:1px solid var(--dw-border);',
+      '  overflow:hidden;',
+      '  min-height:210px;',
+      '  display:grid;',
+      '  place-items:center;',
+      '}',
+      '.dw-qr{',
+      '  display:block;',
+      '  width:100%;',
+      '  height:auto;',
+      '  max-width:260px;',
+      '  background:#fff;',
+      '}',
+      '.dw-qr-hint,.dw-qr-error{',
+      '  margin:0;',
+      '  font-size:13px;',
+      '  color:var(--dw-muted);',
+      '}',
+      '.dw-qr-error{color:#b4442a;display:none;}',
+      '.dw-overlay.has-error .dw-qr-error{display:block;}',
+      '.dw-overlay.has-error .dw-qr-hint{display:none;}',
+      '@media (max-width:520px){',
+      '  .dw-shell{padding:14px;gap:12px;}',
+      '  .dw-actions{gap:6px;}',
+      '  .dw-action{height:48px;border-radius:12px;}',
+      '  .dw-like{width:30px;height:30px;background-size:16px;}',
+      '}',
+      '@media (prefers-reduced-motion:reduce){',
+      '  .dw-action,.dw-github,.dw-dialog{transition:none !important;}',
+      '  .dw-action:hover,.dw-github:hover{transform:none;}',
+      '}'
+    ].join('');
 
-            // --- Hide QR Function ---
-            function hideQR() {
-                MainBox.removeClass('showQR').addClass('hideQR');
-                setTimeout(function() {
-                    QRBox.fadeOut(300, function() {
-                        MainBox.removeClass('hideQR').empty();
-                    });
-                    otherElements.removeClass('blur');
-                    $(document).off('keydown.dismissQR click.dismissQR');
-                }, 400);
-            }
+    document.head.appendChild(style);
+  }
 
-            // --- Show QR Function ---
-            function showQR(qrImageUrl) {
-                MainBox.empty();
+  function isElement(value) {
+    return value instanceof Element;
+  }
 
-                if (qrImageUrl) {
-                    const qrImg = $('<img>', {
-                       id: 'qrCodeImage',
-                       src: qrImageUrl,
-                       alt: '付款二维码' // Alt text might also need translation in a more complex setup
-                    });
-                    qrImg.on('click.donate', function(event) {
-                        event.stopPropagation();
-                    });
-                    MainBox.append(qrImg);
-                }
+  function buildActionButton(type, text, iconUrl, disabled) {
+    var button = document.createElement(type === 'paypal' ? 'a' : 'button');
+    button.className = 'dw-action';
+    button.setAttribute('aria-label', text);
+    button.style.setProperty('--dw-icon', 'url("' + iconUrl + '")');
 
-                otherElements.addClass('blur');
-                QRBox.fadeIn(300, function() {
-                    MainBox.removeClass('hideQR').addClass('showQR');
-                });
+    if (type === 'paypal') {
+      button.href = '#';
+      button.target = '_blank';
+      button.rel = 'noopener noreferrer';
+    } else {
+      button.type = 'button';
+      button.dataset.method = type;
+    }
 
-                // --- Bind Document Listeners for Closing QR ---
-                $(document).on('keydown.dismissQR', function(event) {
-                    if (event.key === "Escape" || event.which === 27) {
-                        hideQR();
-                    }
-                });
-                setTimeout(function() {
-                    $(document).on('click.dismissQR', function(event) {
-                        // Close if click is outside MainBox or directly on QRBox background
-                        if (!$(event.target).closest(MainBox).length || $(event.target).is(QRBox)) {
-                             hideQR();
-                        }
-                    });
-                }, 0);
-            }
+    button.textContent = text;
 
-            // --- Attach Click Handlers to Donate Buttons (AliPay, WeChat) ---
-            donateBoxItems.off('click.donate').on('click.donate', function(event) {
-                event.stopPropagation();
-                const thisID = $(this).attr('id');
+    if (disabled) {
+      button.setAttribute('disabled', 'disabled');
+      button.setAttribute('aria-disabled', 'true');
+    }
 
-                if (thisID === 'AliPay') {
-                    if(config.aliPayQrUrl) {
-                        showQR(config.aliPayQrUrl);
-                    } else {
-                        console.warn("Donate Widget: AliPay QR URL not configured.");
-                    }
-                } else if (thisID === 'WeChat') {
-                     if(config.weChatQrUrl) {
-                        showQR(config.weChatQrUrl);
-                    } else {
-                        console.warn("Donate Widget: WeChat QR URL not configured.");
-                    }
-                }
-            });
+    return button;
+  }
 
-             QRBox.off('click.donate').on('click.donate', function(event) {
-                 if ($(event.target).is(QRBox)) {
-                     hideQR();
-                 }
-             });
+  function DonateWidgetInstance(container, config) {
+    this.container = container;
+    this.config = config;
+    this.lastTrigger = null;
+    this.cleanupFns = [];
+    this.render();
+    this.bindEvents();
+  }
 
-        } // end initializeLogic
+  DonateWidgetInstance.prototype.render = function () {
+    var config = this.config;
+    var t = config.t;
 
-    })(); // End of self-executing wrapper function
+    this.container.classList.add('dw-root');
+    this.container.dataset.theme = config.theme;
+
+    var shell = document.createElement('section');
+    shell.className = 'dw-shell';
+    shell.setAttribute('aria-label', t.donate);
+
+    var heading = document.createElement('p');
+    heading.className = 'dw-heading';
+    heading.innerHTML = '<span class="dw-like" aria-hidden="true"></span><span>' + escapeHTML(config.title || t.donate) + '</span>';
+    heading.querySelector('.dw-like').style.backgroundImage = 'url("' + config.assetBaseUrl + 'like.svg")';
+
+    var actions = document.createElement('div');
+    actions.className = 'dw-actions';
+
+    this.payPalAction = buildActionButton('paypal', t.payPal, config.assetBaseUrl + 'paypal.svg', !config.payPalUrl);
+    this.aliPayAction = buildActionButton('alipay', t.aliPay, config.assetBaseUrl + 'alipay.svg', !config.aliPayQrUrl);
+    this.weChatAction = buildActionButton('wechat', t.weChat, config.assetBaseUrl + 'wechat.svg', !config.weChatQrUrl);
+
+    if (config.payPalUrl) {
+      this.payPalAction.href = config.payPalUrl;
+    }
+
+    this.aliPayAction.setAttribute('title', t.openAliPayQr);
+    this.weChatAction.setAttribute('title', t.openWeChatQr);
+
+    actions.appendChild(this.payPalAction);
+    actions.appendChild(this.aliPayAction);
+    actions.appendChild(this.weChatAction);
+
+    var meta = document.createElement('div');
+    meta.className = 'dw-meta';
+
+    if (config.showGithub && config.githubUrl) {
+      this.githubAction = document.createElement('a');
+      this.githubAction.className = 'dw-github';
+      this.githubAction.href = config.githubUrl;
+      this.githubAction.target = '_blank';
+      this.githubAction.rel = 'noopener noreferrer';
+      this.githubAction.title = 'GitHub';
+      this.githubAction.setAttribute('aria-label', 'GitHub');
+      this.githubAction.style.setProperty('--dw-icon-github', 'url("' + config.assetBaseUrl + 'github.svg")');
+      meta.appendChild(this.githubAction);
+    }
+
+    this.overlay = document.createElement('div');
+    this.overlay.className = 'dw-overlay';
+    this.overlay.setAttribute('aria-hidden', 'true');
+
+    this.overlay.innerHTML = [
+      '<div class="dw-dialog" role="dialog" aria-modal="true" aria-label="' + escapeHTML(t.qrDialogLabel) + '">',
+      '  <div class="dw-dialog-head">',
+      '    <p class="dw-dialog-title"></p>',
+      '    <button type="button" class="dw-close" aria-label="' + escapeHTML(t.closeDialog) + '">&times;</button>',
+      '  </div>',
+      '  <figure class="dw-qr-wrap">',
+      '    <img class="dw-qr" alt="' + escapeHTML(t.qrImageAlt) + '" loading="lazy">',
+      '  </figure>',
+      '  <p class="dw-qr-hint">' + escapeHTML(t.qrHint) + '</p>',
+      '  <p class="dw-qr-error" role="status" aria-live="polite">' + escapeHTML(t.qrLoadError) + '</p>',
+      '</div>'
+    ].join('');
+
+    shell.appendChild(heading);
+    shell.appendChild(actions);
+    if (meta.childNodes.length) {
+      shell.appendChild(meta);
+    }
+
+    this.container.innerHTML = '';
+    this.container.appendChild(shell);
+    this.container.appendChild(this.overlay);
+
+    this.dialogTitle = this.overlay.querySelector('.dw-dialog-title');
+    this.dialogClose = this.overlay.querySelector('.dw-close');
+    this.qrImage = this.overlay.querySelector('.dw-qr');
+  };
+
+  DonateWidgetInstance.prototype.bindEvents = function () {
+    var _this = this;
+    var t = this.config.t;
+
+    this.payPalAction.addEventListener('click', function (event) {
+      if (!(_this.config.payPalUrl && _this.config.payPalUrl.length)) {
+        event.preventDefault();
+        return;
+      }
+
+      event.preventDefault();
+      var confirmed = window.confirm(t.payPalConfirm);
+      if (confirmed) {
+        window.open(_this.config.payPalUrl, '_blank', 'noopener');
+      }
+    });
+
+    this.aliPayAction.addEventListener('click', function (event) {
+      event.preventDefault();
+      _this.openQR('alipay', _this.aliPayAction);
+    });
+
+    this.weChatAction.addEventListener('click', function (event) {
+      event.preventDefault();
+      _this.openQR('wechat', _this.weChatAction);
+    });
+
+    this.dialogClose.addEventListener('click', function () {
+      _this.closeQR();
+    });
+
+    this.overlay.addEventListener('click', function (event) {
+      if (event.target === _this.overlay) {
+        _this.closeQR();
+      }
+    });
+
+    var onKeydown = function (event) {
+      if (event.key === 'Escape' && _this.overlay.classList.contains('is-open')) {
+        _this.closeQR();
+      }
+    };
+
+    document.addEventListener('keydown', onKeydown);
+    this.cleanupFns.push(function () {
+      document.removeEventListener('keydown', onKeydown);
+    });
+
+    var onImageError = function () {
+      _this.overlay.classList.add('has-error');
+    };
+
+    var onImageLoad = function () {
+      _this.overlay.classList.remove('has-error');
+    };
+
+    this.qrImage.addEventListener('error', onImageError);
+    this.qrImage.addEventListener('load', onImageLoad);
+
+    this.cleanupFns.push(function () {
+      _this.qrImage.removeEventListener('error', onImageError);
+      _this.qrImage.removeEventListener('load', onImageLoad);
+    });
+  };
+
+  DonateWidgetInstance.prototype.openQR = function (method, trigger) {
+    var t = this.config.t;
+    var qrUrl = method === 'alipay' ? this.config.aliPayQrUrl : this.config.weChatQrUrl;
+
+    if (!qrUrl) {
+      return;
+    }
+
+    this.lastTrigger = trigger || null;
+    this.dialogTitle.textContent = method === 'alipay' ? t.aliPay : t.weChat;
+    this.overlay.classList.remove('has-error');
+    this.qrImage.src = qrUrl;
+
+    this.overlay.classList.add('is-open');
+    this.overlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    this.dialogClose.focus();
+  };
+
+  DonateWidgetInstance.prototype.closeQR = function () {
+    this.overlay.classList.remove('is-open', 'has-error');
+    this.overlay.setAttribute('aria-hidden', 'true');
+    this.qrImage.removeAttribute('src');
+    document.body.style.overflow = '';
+
+    if (isElement(this.lastTrigger)) {
+      this.lastTrigger.focus();
+    }
+  };
+
+  DonateWidgetInstance.prototype.update = function (options) {
+    this.destroy();
+    this.config = mergeConfig(this.container, options);
+    this.render();
+    this.bindEvents();
+    instances.set(this.container, this);
+  };
+
+  DonateWidgetInstance.prototype.destroy = function () {
+    this.cleanupFns.forEach(function (fn) {
+      fn();
+    });
+    this.cleanupFns = [];
+
+    this.closeQR();
+
+    this.container.innerHTML = '';
+    this.container.classList.remove('dw-root');
+    delete this.container.dataset.theme;
+
+    // Keep object reusable for update in case this method is called directly.
+    this.payPalAction = null;
+    this.aliPayAction = null;
+    this.weChatAction = null;
+    this.githubAction = null;
+    this.overlay = null;
+    this.dialogTitle = null;
+    this.dialogClose = null;
+    this.qrImage = null;
+    this.lastTrigger = null;
+
+    if (instances.get(this.container) === this) {
+      instances.delete(this.container);
+    }
+  };
+
+  function escapeHTML(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function initElement(element, options) {
+    if (!(element instanceof Element)) {
+      return null;
+    }
+
+    ensureStyle();
+
+    var existing = instances.get(element);
+    if (existing) {
+      if (options && Object.keys(options).length) {
+        existing.update(options);
+      }
+      return existing;
+    }
+
+    var config = mergeConfig(element, options);
+    var instance = new DonateWidgetInstance(element, config);
+    instances.set(element, instance);
+    return instance;
+  }
+
+  function findAutoTargets() {
+    var targets = [];
+    var seen = new Set();
+
+    var legacy = document.getElementById(LEGACY_CONTAINER_ID);
+    if (legacy && !seen.has(legacy)) {
+      seen.add(legacy);
+      targets.push(legacy);
+    }
+
+    var modern = document.querySelectorAll('[data-donate-widget]');
+    modern.forEach(function (node) {
+      if (!seen.has(node)) {
+        seen.add(node);
+        targets.push(node);
+      }
+    });
+
+    return targets;
+  }
+
+  function init(selectorOrElement, options) {
+    var targets;
+
+    if (!selectorOrElement) {
+      targets = findAutoTargets();
+    } else {
+      targets = toArray(selectorOrElement);
+    }
+
+    return targets.map(function (element) {
+      return initElement(element, options || {});
+    }).filter(Boolean);
+  }
+
+  function initAll(options) {
+    return init(null, options || {});
+  }
+
+  window.DonateWidget = {
+    init: init,
+    initAll: initAll,
+    version: '2.0.0'
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      initAll();
+    });
+  } else {
+    initAll();
+  }
+})();
